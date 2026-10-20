@@ -15,9 +15,9 @@ Background for the rules in [../SKILL.md](../SKILL.md). The skill file is what y
 
 ```text
 agent
-  │   ./sbt-sber.sh -batch -no-colors "core/testOnly com.acme.core.FooSpec"
+  │   ./sbt-launcher.sh -batch -no-colors "core/testOnly com.acme.core.FooSpec"
   ▼
-sbt-sber.sh                corporate wrapper, a black box to the agent
+sbt-launcher.sh            corporate wrapper, a black box to the agent
   │   adds authentication, repository, and memory configuration
   │   forwards every other argument unchanged
   ▼
@@ -169,19 +169,19 @@ Anything that fails before `welcome to sbt` or `loading settings for project` be
 ### Before the launcher runs
 
 ```text
-zsh: no such file or directory: ./sbt-sber.sh
-bash: ./sbt-sber.sh: No such file or directory
+zsh: no such file or directory: ./sbt-launcher.sh
+bash: ./sbt-launcher.sh: No such file or directory
 ```
 
 The shell did not find the launcher, so nothing ran. Either you are not at the repository root (change to it and run the command from there, as the skill requires), or the launcher is missing at the root (stop and tell the user the repository is not set up for agent builds; see "No launcher, no build" in the skill).
 
-### Launcher (`sbt-sber.sh`)
+### Launcher (`sbt-launcher.sh`)
 
 Its own messages are corporate and not known to this skill. Recognise them by position: they come before any sbt-extras or sbt line, and the command exits non-zero. A launcher that is present but cannot be executed also belongs here:
 
 ```text
-zsh: permission denied: ./sbt-sber.sh
-bash: ./sbt-sber.sh: Permission denied
+zsh: permission denied: ./sbt-launcher.sh
+bash: ./sbt-launcher.sh: Permission denied
 ```
 
 Report area: launcher precondition. Do not `chmod` it, run it through `sh` or `bash`, or read it to see what it checks.
@@ -277,7 +277,13 @@ Unresolved artifact (Ivy, older builds):
 [error] unresolved dependency: com.acme#widgets_2.13;1.4.0: not found
 ```
 
-Report area: repositories, with the coordinates (`com.acme:widgets_2.13:1.4.0`).
+The scalafmt version pinned in `.scalafmt.conf` is fetched by the plugin when `scalafmtAll` runs. When that fails, the message names the version and the configuration file instead of coordinates (sbt-scalafmt 2.6.2, abbreviated):
+
+```text
+[error] (core / Compile / scalafmt) org.scalafmt.sbt.ScalafmtSbtReporter$ScalafmtSbtError: scalafmt: [v3.8.1] failed to download [/repo/.scalafmt.conf]
+```
+
+Report area: repositories, with the coordinates (`com.acme:widgets_2.13:1.4.0`), or for scalafmt the version (`scalafmt 3.8.1`). Do not change the version in `.scalafmt.conf`.
 
 Out of memory:
 
@@ -288,6 +294,29 @@ java.lang.OutOfMemoryError: GC overhead limit exceeded
 ```
 
 Report area: memory.
+
+Formatting not available (sbt 1.13). sbt loads the build, then rejects the formatting task:
+
+```text
+[error] Not a valid command: scalafmtAll
+[error] Not a valid project ID: scalafmtAll
+[error] Expected ':'
+[error] Not a valid key: scalafmtAll (similar: scalaHome)
+[error] scalafmtAll
+[error]            ^
+```
+
+This is what a build that does not declare the sbt-scalafmt plugin, or declares one older than 2.0.0-RC5 that has no `scalafmtAll`, looks like after the marker; sbt 2 adds a line `scalafmtAll isn't a query`. When the task is spelled exactly `scalafmtAll`, it is not your typo: do not respell or retry it. A real typo such as `scalafmtAl` prints the same lines, but sbt then lists `scalafmtAll` among the similar keys. A declared plugin that cannot be downloaded fails earlier, as an unresolved artifact (above).
+
+When `.scalafmt.conf` is missing, the plugin fails instead, once per module and configuration (sbt-scalafmt 2.6.2, abbreviated; other versions may word it differently):
+
+```text
+[error] scalafmt: File does not exist: /repo/.scalafmt.conf
+[error] (core / Compile / scalafmt) scalafmt: File does not exist: /repo/.scalafmt.conf
+[error] (core / Test / scalafmt) scalafmt: File does not exist: /repo/.scalafmt.conf
+```
+
+Report area: formatting. Do not add `sbt-scalafmt` to `project/plugins.sbt`, create `.scalafmt.conf`, format with the scalafmt CLI, `cs launch scalafmt`, or an IDE, or continue without formatting.
 
 ### After the marker: your work
 
@@ -313,6 +342,17 @@ Failing test:
 [error] (core / Test / test) sbt.TestsFailedException: Tests unsuccessful
 ```
 
+Scalafmt parse error. It points at a source file and line like a compile error, but the failing task is a scalafmt one, and with the plugin's default `scalafmtFailOnErrors` nothing has compiled yet. From sbt-scalafmt 2.6.2 with scalafmt 3.11.5, abbreviated; other versions word it differently:
+
+```text
+[error] org.scalafmt.sbt.ScalafmtSbtReporter$ScalafmtSbtError: scalafmt: [3.11.5] /repo/core/src/main/scala/com/acme/Foo.scala:5: error: [dialect scala213] `)` expected but `}` found
+[error] }
+[error] ^ [/repo/core/src/main/scala/com/acme/Foo.scala]
+[error] (core / Compile / scalafmt) org.scalafmt.sbt.ScalafmtSbtReporter$ScalafmtSbtError: scalafmt: [3.11.5] /repo/core/src/main/scala/com/acme/Foo.scala:5: error: ...
+```
+
+If you changed the file, fix it and run the same invocation again with `scalafmtAll` kept; if you did not change it, tell the user which file and which error, and do not drop `scalafmtAll` to get past it.
+
 An error in `build.sbt` or `project/*.scala` after the marker is a build failure too. Fix it only if the fix leaves dependency, resolver, and credential settings untouched. Otherwise report it.
 
 ### Your own invocation mistakes
@@ -321,22 +361,23 @@ These failures come from the command you typed, not from the build or the infras
 
 | Symptom | Printed by | Correction |
 |---|---|---|
-| `no such file or directory: ./sbt-sber.sh` | the shell, before the launcher runs | Change to the repository root. If the launcher is missing there, follow "No launcher, no build". |
+| `no such file or directory: ./sbt-launcher.sh` | the shell, before the launcher runs | Change to the repository root. If the launcher is missing there, follow "No launcher, no build". |
 | `... doesn't appear to be an sbt project.` | sbt-extras | Change to the repository root. Never `-sbt-create`. |
 | `Aborting: -trace requires <integer> argument` | sbt-extras | `-trace <n>` with `n` of 0 or more, or drop `-trace`. |
 | `Not a valid command`, `Not a valid key`, `Not a valid project ID`, `Expected ...` | sbt, after the marker | Fix the spelling, quote a command that has arguments, or fix the module name. |
+| `Not a valid key: scalafmtAll` or `Not a valid command: scalafmtAll`, with the task spelled exactly `scalafmtAll` | sbt, after the marker | None: this is not your mistake. Report it as formatting not available. |
 
 An unquoted `testOnly` argument, for example (typical, abbreviated). sbt first runs `testOnly` with no argument, which runs every test, and then rejects the class name as a command:
 
 ```text
-$ ./sbt-sber.sh -batch testOnly com.acme.FooSpec
+$ ./sbt-launcher.sh -batch testOnly com.acme.FooSpec
 ...
 [error] Not a valid command: com.acme.FooSpec
 [error] Not a valid project ID: com.acme.FooSpec
 [error] Not a valid key: com.acme.FooSpec
 ```
 
-Correction: `./sbt-sber.sh -batch "testOnly com.acme.FooSpec"`.
+Correction: `./sbt-launcher.sh -batch "testOnly com.acme.FooSpec"`.
 
 ## 5. Worked examples
 
@@ -344,38 +385,43 @@ All from the repository root.
 
 | Goal | Command |
 |---|---|
-| Compile everything | `./sbt-sber.sh -batch compile` |
-| Compile main and test sources | `./sbt-sber.sh -batch Test/compile` |
-| Run all tests | `./sbt-sber.sh -batch test` |
-| Clean, compile, and test in one start | `./sbt-sber.sh -batch clean compile test` |
-| Run one suite | `./sbt-sber.sh -batch "testOnly com.acme.FooSpec"` |
-| Run suites by pattern | `./sbt-sber.sh -batch "testOnly *FooSpec"` |
-| Run one suite and pass arguments to the test framework | `./sbt-sber.sh -batch "testOnly com.acme.FooSpec -- -z empty"` |
-| Compile one module | `./sbt-sber.sh -batch core/compile` |
-| Test one module | `./sbt-sber.sh -batch core/test` |
-| One suite in one module | `./sbt-sber.sh -batch "core/testOnly com.acme.core.FooSpec"` |
-| List modules | `./sbt-sber.sh -batch -no-colors projects` |
-| A module's declared dependencies | `./sbt-sber.sh -batch -no-colors "show core/libraryDependencies"` |
-| Modules `core` depends on (`dependsOn`) | `./sbt-sber.sh -batch -no-colors "show core/projectDependencies"` |
-| Scala version in use | `./sbt-sber.sh -batch -no-colors "show core/scalaVersion"` |
-| Run the application | `./sbt-sber.sh -batch "core/run --input sample.json"` |
-| Full stack trace for one failing suite | `./sbt-sber.sh -batch -trace 100 "core/testOnly com.acme.core.FooSpec"` |
-| Verbose log for one run | `./sbt-sber.sh -batch --debug core/compile` |
-| Capture long output | `./sbt-sber.sh -batch -no-colors test > "${TMPDIR:-/tmp}/sbt-build.log" 2>&1; echo "exit=$?"` |
+| Compile everything | `./sbt-launcher.sh -batch compile` |
+| Compile main and test sources | `./sbt-launcher.sh -batch Test/compile` |
+| Run all tests | `./sbt-launcher.sh -batch test` |
+| Clean, compile, and test in one start | `./sbt-launcher.sh -batch clean compile test` |
+| Format, compile, and test in one start | `./sbt-launcher.sh -batch scalafmtAll compile test` |
+| Format a changed module the root does not aggregate | `./sbt-launcher.sh -batch scalafmtAll core/scalafmtAll core/compile core/test` |
+| Run one suite | `./sbt-launcher.sh -batch "testOnly com.acme.FooSpec"` |
+| Run suites by pattern | `./sbt-launcher.sh -batch "testOnly *FooSpec"` |
+| Run one suite and pass arguments to the test framework | `./sbt-launcher.sh -batch "testOnly com.acme.FooSpec -- -z empty"` |
+| Compile one module | `./sbt-launcher.sh -batch core/compile` |
+| Test one module | `./sbt-launcher.sh -batch core/test` |
+| One suite in one module | `./sbt-launcher.sh -batch "core/testOnly com.acme.core.FooSpec"` |
+| List modules | `./sbt-launcher.sh -batch -no-colors projects` |
+| A module's declared dependencies | `./sbt-launcher.sh -batch -no-colors "show core/libraryDependencies"` |
+| Modules `core` depends on (`dependsOn`) | `./sbt-launcher.sh -batch -no-colors "show core/projectDependencies"` |
+| Scala version in use | `./sbt-launcher.sh -batch -no-colors "show core/scalaVersion"` |
+| Run the application | `./sbt-launcher.sh -batch "core/run --input sample.json"` |
+| Full stack trace for one failing suite | `./sbt-launcher.sh -batch -trace 100 "core/testOnly com.acme.core.FooSpec"` |
+| Verbose log for one run | `./sbt-launcher.sh -batch --debug core/compile` |
+| Capture long output | `./sbt-launcher.sh -batch -no-colors test > "${TMPDIR:-/tmp}/sbt-build.log" 2>&1; echo "exit=$?"` |
 
 Common mistakes:
 
 | Wrong | Why | Right |
 |---|---|---|
-| `./sbt-sber.sh -batch testOnly com.acme.FooSpec` | sbt receives two commands: `testOnly`, which runs every test, then `com.acme.FooSpec`, which is not a command. | `./sbt-sber.sh -batch "testOnly com.acme.FooSpec"` |
-| `cd core && ../sbt-sber.sh -batch compile` | Not run from the root. | `./sbt-sber.sh -batch core/compile` from the root |
-| `./sbt-sber.sh compile` | No `-batch`. | `./sbt-sber.sh -batch compile` |
-| `./sbt-sber.sh -batch` | No command, so the runner opens the interactive shell. | Do not invoke the launcher without a command. |
-| `./sbt-sber.sh -batch compile && ./sbt-sber.sh -batch test` | Two sbt starts. | `./sbt-sber.sh -batch compile test` |
-| `./sbt-sber.sh -batch test \| tail -50` | Truncated output, and the exit status is lost. | Capture to a file, then read every `[warn]` and `[error]` line. |
-| `./sbt-sber.sh -batch --error test` | Hides warnings. | `./sbt-sber.sh -batch test` |
-| `SBT_OPTS=-J-Xmx4g ./sbt-sber.sh -batch test` | Environment override of memory. | Report the out-of-memory failure. |
-| `./sbt-sber.sh -batch "set scalacOptions += \"-Xfatal-warnings\"" compile` | Changes compilation. | `./sbt-sber.sh -batch compile` |
+| `./sbt-launcher.sh -batch testOnly com.acme.FooSpec` | sbt receives two commands: `testOnly`, which runs every test, then `com.acme.FooSpec`, which is not a command. | `./sbt-launcher.sh -batch "testOnly com.acme.FooSpec"` |
+| `cd core && ../sbt-launcher.sh -batch compile` | Not run from the root. | `./sbt-launcher.sh -batch core/compile` from the root |
+| `./sbt-launcher.sh compile` | No `-batch`. | `./sbt-launcher.sh -batch compile` |
+| `./sbt-launcher.sh -batch` | No command, so the runner opens the interactive shell. | Do not invoke the launcher without a command. |
+| `./sbt-launcher.sh -batch compile && ./sbt-launcher.sh -batch test` | Two sbt starts. | `./sbt-launcher.sh -batch compile test` |
+| `./sbt-launcher.sh -batch test \| tail -50` | Truncated output, and the exit status is lost. | Capture to a file, then read every `[warn]` and `[error]` line. |
+| `./sbt-launcher.sh -batch --error test` | Hides warnings. | `./sbt-launcher.sh -batch test` |
+| `SBT_OPTS=-J-Xmx4g ./sbt-launcher.sh -batch test` | Environment override of memory. | Report the out-of-memory failure. |
+| `./sbt-launcher.sh -batch "set scalacOptions += \"-Xfatal-warnings\"" compile` | Changes compilation. | `./sbt-launcher.sh -batch compile` |
+| `./sbt-launcher.sh -batch "scalafmtOnly src/main/scala/com/acme/Foo.scala" compile` | Narrows the repository's formatting scope. | `./sbt-launcher.sh -batch scalafmtAll compile` |
+| `./sbt-launcher.sh -batch core/scalafmtAll core/compile` | Replaces the unscoped task with a module one, which narrows the repository's scope. | `./sbt-launcher.sh -batch scalafmtAll core/compile`, adding `core/scalafmtAll` after `scalafmtAll` only when the root does not aggregate `core` |
+| `scalafmt src/` or `cs launch scalafmt -- src/` | Formats outside the launcher and the corporate repositories. | `./sbt-launcher.sh -batch scalafmtAll` |
 
 ## 6. sbt-extras revision
 

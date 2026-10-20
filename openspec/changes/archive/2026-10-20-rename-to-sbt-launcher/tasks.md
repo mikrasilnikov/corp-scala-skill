@@ -1,0 +1,34 @@
+# Tasks
+
+## 1. Move the skill directory
+
+- [x] 1.1 Run `git mv skills/corp-scala skills/sbt-launcher` before any content edit (design D2), and remove any untracked leftover such as `.DS_Store` if the old directory survives the move. Verify: `test -f skills/sbt-launcher/SKILL.md && test -f skills/sbt-launcher/references/sbt-launcher.md` succeeds, `test -e skills/corp-scala` fails, and `git status --porcelain` lists both files as renames (`R `).
+
+## 2. Skill body: `skills/sbt-launcher/SKILL.md`
+
+- [x] 2.1 Replace every `sbt-sber.sh` with `sbt-launcher.sh` in `skills/sbt-launcher/SKILL.md` (design D1: the exact token only, so the word "launcher", the three `references/sbt-launcher.md` links, and `sbt-launch.jar` stay as they are), including the two occurrences inside the frontmatter `description` and the shell error example `no such file or directory: ./sbt-sber.sh`. Verify: `grep -o "sbt-launcher.sh" skills/sbt-launcher/SKILL.md | wc -l` prints 26, `grep -c "sbt-sber" skills/sbt-launcher/SKILL.md` prints 0, and `wc -l skills/sbt-launcher/SKILL.md` still prints 143.
+- [x] 2.2 Change line 2 from `name: corp-scala` to `name: sbt-launcher` and line 6 from `# Corporate Scala` to `# sbt launcher` (design D2, D3), touching nothing else on those lines. Verify: `sed -n '2p;6p' skills/sbt-launcher/SKILL.md` prints exactly `name: sbt-launcher` and `# sbt launcher`, `grep -c "corp-scala" skills/sbt-launcher/SKILL.md` prints 0, lines 1 and 4 are still `---`, and line 3 still begins with `description:` and is the only description line.
+- [x] 2.3 Check the links and the size of the edit after 2.1 and 2.2: `grep -c "references/sbt-launcher.md" skills/sbt-launcher/SKILL.md` prints 3 (one plain, two with `#2-runner-flags`), `ls skills/sbt-launcher/references/sbt-launcher.md` succeeds, and `git diff HEAD -M --numstat -- skills/` shows `SKILL.md` as a rename with 24 insertions and 24 deletions (the 22 token lines plus the two lines from 2.2).
+
+## 3. Reference: `skills/sbt-launcher/references/sbt-launcher.md`
+
+- [x] 3.1 Replace every `sbt-sber.sh` with `sbt-launcher.sh` in the reference (design D1), including the heading on line 178 (`### Launcher (\`sbt-sber.sh\`)` becomes `### Launcher (\`sbt-launcher.sh\`)`), the shell error examples under "Before the launcher runs" and "Launcher", the "Your own invocation mistakes" table, and the worked-examples and common-mistakes tables in section 5. Verify: `grep -o "sbt-launcher.sh" skills/sbt-launcher/references/sbt-launcher.md | wc -l` prints 44, `grep -c "sbt-sber"` on it prints 0, `wc -l` still prints 391, and `git diff HEAD -M --numstat -- skills/` shows the reference as a rename with 37 insertions and 37 deletions.
+- [x] 3.2 Re-align the layer diagram in section 1 (design D5): on line 20 the component name is now four characters longer, so remove four of the spaces after `sbt-launcher.sh` so that `corporate wrapper, a black box to the agent` starts in column 28, the same column as `the runner (bash)` on line 24 and `sbt-launch.jar boots` on line 31. Verify: `sed -n '20p;24p;31p' skills/sbt-launcher/references/sbt-launcher.md | grep -c '^.\{26\} [a-z]'` (a space in column 27, a letter in column 28) prints 3; a substitution without this fix drops it to 2.
+- [x] 3.3 Confirm the unrelated tokens survived (design D1, D7): `grep -c "sbt-launch\.jar" skills/sbt-launcher/references/sbt-launcher.md` still prints 8, `grep -c "~/\.sbt/launchers"` on it still prints 3, `grep -c "\.\./SKILL\.md"` on it prints 1, the title line is still `# sbt launcher reference`, and `diff <(git show HEAD:skills/corp-scala/references/sbt-launcher.md | grep -n '^#') <(grep -n '^#' skills/sbt-launcher/references/sbt-launcher.md)` reports exactly one differing line, the heading from 3.1.
+
+## 4. README
+
+- [x] 4.1 Replace `corp-scala` with `sbt-launcher` on the four lines of `README.md` that name the skill (design D3): the table row (line 9), the install paragraph (line 13), the install example (line 17), and the resulting path (line 20). The row's one-line summary stays as it is, since the skill's description changes only by the launcher token. Verify: `grep -n "sbt-launcher" README.md` prints exactly those four lines, and `grep -c "corp-scala" README.md` prints 0 at this point.
+- [x] 4.2 Add one sentence at the end of the install section, after the paragraph that ends "copy it into that project's `.claude/skills/` instead." (design D4): "If you installed this skill under its former name, delete that `corp-scala/` directory from your skills directory: left beside `sbt-launcher/`, it names a launcher that no longer exists." Verify: `grep -n "corp-scala" README.md` prints exactly one line and it is this sentence, and the table still lists every directory under `skills/`: for each `d` in `ls skills`, `grep -c "^| .$d. |" README.md` prints 1 (the dots stand for the backticks around the name).
+
+## 5. Whole-change checks
+
+- [x] 5.1 Run the whole-change text checks from design D7: `grep -rn "sbt-sber" skills/ README.md openspec/changes/rename-to-sbt-launcher/specs/` prints nothing; `grep -rn "corp-scala" skills/` prints nothing; `sed -n '2p' skills/sbt-launcher/SKILL.md` prints `name: sbt-launcher`, equal to the directory name; `git status --porcelain` lists the two renamed skill files, `README.md`, and the change directory `openspec/changes/rename-to-sbt-launcher/`, and nothing else (the archived changes and `openspec/specs/` are untouched).
+- [x] 5.2 Read the renamed skill once end to end as an agent would: the frontmatter description, the title, the "No launcher, no build" paragraph, the report template (`Command:   ./sbt-launcher.sh -batch <exact arguments>`), the "Launcher-owned configuration" section where the word "launcher" and the file `sbt-launcher.sh` now sit side by side, and the reference's common-mistakes table (`cd core && ../sbt-launcher.sh -batch compile`); everything should read naturally and say nothing that still implies either old name. Verify: `openspec validate rename-to-sbt-launcher --strict` passes and the read-through finds no sentence to reword; if it does, reword without changing meaning and re-run the counts in 2.1 and 3.1.
+
+## Workflow follow-up
+
+- Archive the change after review. Archiving applies the 16 modified requirements to the four main specs; afterwards `grep -rn "sbt-sber" openspec/specs/` and `grep -rn "corp-scala" openspec/specs/` print nothing and `openspec validate --specs` passes.
+- Ship the launcher as `sbt-launcher.sh` at the root of every corporate repository; any repository still carrying `sbt-sber.sh` renames it. That is outside this repository (proposal: Impact).
+- Anyone who installed `corp-scala` deletes that directory and copies `skills/sbt-launcher/` in its place (design D4, Migration Plan).
+- Only after this change is archived, propose `mandatory-scalafmt` against the renamed skill and specs (proposal: Impact, Sequencing).

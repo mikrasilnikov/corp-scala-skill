@@ -6,18 +6,20 @@ This repository is a collection of agent skills in the `SKILL.md` format. Each s
 
 | Skill | Summary |
 | --- | --- |
-| `corp-scala` | Building, testing, and changing dependencies in corporate Scala projects built with sbt. |
+| `sbt-launcher` | Building, testing, formatting, and changing dependencies in corporate Scala projects built with sbt. |
 
 ## Installing a skill
 
-Copy the skill's directory, `skills/<name>/`, into your agent's skills directory. The installed directory keeps the skill's name: `skills/corp-scala/` installs as `corp-scala/`. For Claude Code, for example:
+Copy the skill's directory, `skills/<name>/`, into your agent's skills directory. The installed directory keeps the skill's name: `skills/sbt-launcher/` installs as `sbt-launcher/`. For Claude Code, for example:
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -R skills/corp-scala ~/.claude/skills/
+cp -R skills/sbt-launcher ~/.claude/skills/
 ```
 
-This creates `~/.claude/skills/corp-scala/SKILL.md`. To install a skill for one project only, copy it into that project's `.claude/skills/` instead.
+This creates `~/.claude/skills/sbt-launcher/SKILL.md`. To install a skill for one project only, copy it into that project's `.claude/skills/` instead.
+
+If you installed this skill under its former name, delete that `corp-scala/` directory from your skills directory: left beside `sbt-launcher/`, it names a launcher that no longer exists.
 
 ## Adding a skill
 

@@ -11,7 +11,7 @@ Each skill in this repository SHALL be a directory `skills/<name>/` that contain
 
 #### Scenario: The existing skill
 - **WHEN** the repository is checked out after this change
-- **THEN** `skills/corp-scala/SKILL.md` exists with `name: corp-scala` in its frontmatter, and no `corp-scala/` directory exists at the repository root
+- **THEN** `skills/sbt-launcher/SKILL.md` exists with `name: sbt-launcher` in its frontmatter, `skills/corp-scala/` no longer exists, and no `sbt-launcher/` or `corp-scala/` directory exists at the repository root
 
 #### Scenario: A second skill is added
 - **WHEN** a new skill with frontmatter `name: <name>` is added to the repository
@@ -29,8 +29,8 @@ Every file a skill needs (its `SKILL.md`, and any `references/`, `scripts/`, or 
 - **THEN** every link in its `SKILL.md` and supporting files resolves within the copy, and the skill loads without anything else from this repository
 
 #### Scenario: Links inside the existing skill
-- **WHEN** `skills/corp-scala/SKILL.md` refers to its reference document and the reference refers back
-- **THEN** the links are `references/sbt-launcher.md` and `../SKILL.md`, both resolving inside `skills/corp-scala/`
+- **WHEN** `skills/sbt-launcher/SKILL.md` refers to its reference document and the reference refers back
+- **THEN** the links are `references/sbt-launcher.md` and `../SKILL.md`, both resolving inside `skills/sbt-launcher/`
 
 #### Scenario: Shared material between skills
 - **WHEN** two skills need the same supporting text
@@ -48,5 +48,5 @@ The repository root SHALL contain a `README.md` that states that the repository 
 - **THEN** `README.md` gains an entry for it in the same change
 
 #### Scenario: Installing from the README
-- **WHEN** a reader follows the README's install instruction for `corp-scala`
-- **THEN** they copy `skills/corp-scala/` into their agent's skills directory and the installed directory is named `corp-scala`
+- **WHEN** a reader follows the README's install instruction for `sbt-launcher`
+- **THEN** they copy `skills/sbt-launcher/` into their agent's skills directory and the installed directory is named `sbt-launcher`

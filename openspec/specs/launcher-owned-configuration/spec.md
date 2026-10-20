@@ -7,7 +7,7 @@ Defines the build configuration an agent must treat as read-only because the lau
 ## Requirements
 
 ### Requirement: Authentication, repositories, and memory belong to the launcher
-The agent SHALL treat the build's authentication, repository, and memory configuration as owned by `./sbt-sber.sh` and SHALL NOT create, modify, delete, select, or override any of it by any means. When a failure traces back to one of these areas, the agent SHALL report it to the user rather than change it.
+The agent SHALL treat the build's authentication, repository, and memory configuration as owned by `./sbt-launcher.sh` and SHALL NOT create, modify, delete, select, or override any of it by any means. When a failure traces back to one of these areas, the agent SHALL report it to the user rather than change it.
 
 #### Scenario: Artifact cannot be resolved
 - **WHEN** a build fails because an artifact is not available from the configured repositories
@@ -22,7 +22,7 @@ The agent SHALL treat the build's authentication, repository, and memory configu
 - **THEN** the agent reports it and does not set `JAVA_HOME`, pass `-java-home`, or install a JDK
 
 ### Requirement: Launcher-owned files are read-only
-The agent SHALL NOT modify `sbt-sber.sh`, any repository configuration file at the repository root, `.sbtopts`, `.sbtxopts`, `.jvmopts`, anything under the user's `~/.sbt` directory, or resolver and credential settings in any build definition file. A file at the root that contains a `[repositories]` section is a repository configuration file; when unsure whether a root file is launcher-owned, the agent leaves it unchanged.
+The agent SHALL NOT modify `sbt-launcher.sh`, any repository configuration file at the repository root, `.sbtopts`, `.sbtxopts`, `.jvmopts`, anything under the user's `~/.sbt` directory, or resolver and credential settings in any build definition file. A file at the root that contains a `[repositories]` section is a repository configuration file; when unsure whether a root file is launcher-owned, the agent leaves it unchanged.
 
 #### Scenario: Several repository configuration files for different environments
 - **WHEN** the repository root contains more than one repository configuration file, each for a different build environment
@@ -44,7 +44,7 @@ The agent SHALL NOT modify `sbt-sber.sh`, any repository configuration file at t
 The agent SHALL NOT set, change, or unset `SBT_OPTS`, `SBTX_OPTS`, `JVM_OPTS`, `JAVA_OPTS`, `JAVA_HOME`, or `JDK_HOME` for a launcher invocation, and SHALL NOT pass `-D`, `-J`, `-S`, `-mem`, `-java-home`, `-jvm-opts`, `-sbt-opts`, `-sbtx-opts`, `-ivy`, `-sbt-dir`, `-sbt-boot`, `-no-share`, `-offline`, `-sbt-launch-repo`, `-sbt-jar`, `-sbt-version`, or `-sbt-create` to the launcher.
 
 #### Scenario: Environment variable prefix
-- **WHEN** the agent would run `SBT_OPTS=... ./sbt-sber.sh ...` or export such a variable first
+- **WHEN** the agent would run `SBT_OPTS=... ./sbt-launcher.sh ...` or export such a variable first
 - **THEN** it does not, because sbt-extras parses these variables as if they were command-line flags
 
 #### Scenario: Selecting a repository configuration
@@ -56,7 +56,7 @@ The agent SHALL NOT set, change, or unset `SBT_OPTS`, `SBTX_OPTS`, `JVM_OPTS`, `
 - **THEN** the agent does not pass it and reports the failure instead
 
 ### Requirement: The launcher is a black box
-The agent SHALL NOT read `sbt-sber.sh` or any launcher-owned file to obtain credentials, tokens, or repository URLs, SHALL NOT print their contents, and SHALL NOT reconstruct an equivalent sbt or sbt-extras invocation from what the launcher does.
+The agent SHALL NOT read `sbt-launcher.sh` or any launcher-owned file to obtain credentials, tokens, or repository URLs, SHALL NOT print their contents, and SHALL NOT reconstruct an equivalent sbt or sbt-extras invocation from what the launcher does.
 
 #### Scenario: A credential or URL seems necessary
 - **WHEN** the agent believes it needs a token, password, or repository URL that the launcher holds

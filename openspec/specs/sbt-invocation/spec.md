@@ -7,29 +7,29 @@ Defines how an agent runs the sbt build in a corporate Scala project: the launch
 ## Requirements
 
 ### Requirement: The launcher is the only way to run sbt
-The agent SHALL run sbt exclusively through `./sbt-sber.sh` in the repository root. It SHALL NOT start sbt by any other means, including a globally installed `sbt`, `sbtn` or `sbt --client`, coursier, bloop, a Metals or BSP connection, or a direct `java -jar sbt-launch.jar` invocation.
+The agent SHALL run sbt exclusively through `./sbt-launcher.sh` in the repository root. It SHALL NOT start sbt by any other means, including a globally installed `sbt`, `sbtn` or `sbt --client`, coursier, bloop, a Metals or BSP connection, or a direct `java -jar sbt-launch.jar` invocation.
 
 #### Scenario: Compiling the project
 - **WHEN** the agent needs to compile the project
-- **THEN** it runs `./sbt-sber.sh -batch compile` from the repository root
+- **THEN** it runs `./sbt-launcher.sh -batch compile` from the repository root
 
 #### Scenario: Another sbt is available on the machine
 - **WHEN** an `sbt` binary is on the `PATH` or an IDE build server is already running for the project
-- **THEN** the agent still runs every build task through `./sbt-sber.sh` and does not use the other tool as a substitute
+- **THEN** the agent still runs every build task through `./sbt-launcher.sh` and does not use the other tool as a substitute
 
 #### Scenario: Several tasks are needed
 - **WHEN** the agent needs more than one sbt task, such as `clean`, `compile`, and `test`
-- **THEN** it passes them in order to a single launcher invocation, `./sbt-sber.sh -batch clean compile test`, rather than starting sbt once per task
+- **THEN** it passes them in order to a single launcher invocation, `./sbt-launcher.sh -batch clean compile test`, rather than starting sbt once per task
 
 ### Requirement: The launcher runs from the repository root
 The agent SHALL invoke the launcher with the repository root as the working directory and SHALL scope work to a module through sbt's `module/task` syntax rather than by changing directory.
 
 #### Scenario: Working inside a module directory
 - **WHEN** the agent's current directory is a module or source directory below the root
-- **THEN** it changes to the repository root first and runs, for example, `./sbt-sber.sh -batch core/compile`
+- **THEN** it changes to the repository root first and runs, for example, `./sbt-launcher.sh -batch core/compile`
 
 #### Scenario: Launcher absent from the root
-- **WHEN** `./sbt-sber.sh` does not exist at the repository root
+- **WHEN** `./sbt-launcher.sh` does not exist at the repository root
 - **THEN** the agent stops, reports to the user that the repository is not set up for agent builds, and does not search other directories, fetch a launcher, or fall back to any other sbt
 
 ### Requirement: Every invocation is non-interactive
@@ -37,7 +37,7 @@ The agent SHALL pass `-batch` on every launcher invocation and SHALL always supp
 
 #### Scenario: Running the test suite
 - **WHEN** the agent runs tests
-- **THEN** the invocation is `./sbt-sber.sh -batch test` or a scoped equivalent, with `-batch` present
+- **THEN** the invocation is `./sbt-launcher.sh -batch test` or a scoped equivalent, with `-batch` present
 
 #### Scenario: No command to run
 - **WHEN** the agent has no sbt command to execute
@@ -60,7 +60,7 @@ The agent SHALL place only sbt tasks and commands, and settings whose sole effec
 
 #### Scenario: Running a single test suite
 - **WHEN** the agent runs one suite
-- **THEN** it passes the sbt command as a single quoted argument, `./sbt-sber.sh -batch "testOnly com.acme.FooSpec"`, so that sbt receives one command rather than two
+- **THEN** it passes the sbt command as a single quoted argument, `./sbt-launcher.sh -batch "testOnly com.acme.FooSpec"`, so that sbt receives one command rather than two
 
 #### Scenario: Tempted to change compilation from the command line
 - **WHEN** the agent would pass `-S<scalac option>`, `set scalacOptions ...`, `-D<key>=<value>`, `-J<jvm option>`, or `-sbt-version`
@@ -89,14 +89,14 @@ WHEN the launcher fails before sbt has loaded the build, and the failure is not 
 - **THEN** the agent reports the failure and does not pass `-sbt-launch-repo`, `-sbt-jar`, `-sbt-version`, or `-offline` to get past it
 
 #### Scenario: Launcher is not executable
-- **WHEN** running `./sbt-sber.sh` fails with a permission error
+- **WHEN** running `./sbt-launcher.sh` fails with a permission error
 - **THEN** the agent reports it to the user and does not change the file's permissions or run it through `sh` or `bash` instead
 
 ### Requirement: The agent corrects its own invocation mistakes
 WHEN a launcher run fails because the agent's own command did not follow this capability's rules (it ran from a directory other than the repository root, passed a permitted option in a malformed form, or mistyped, misquoted, or misscoped an sbt command), the agent SHALL correct the command so that it follows every rule in this capability and run it again.
 
 #### Scenario: Launcher run outside the repository root
-- **WHEN** the shell cannot find `./sbt-sber.sh` because the agent was not at the repository root, or sbt-extras reports that the current directory does not appear to be an sbt project
+- **WHEN** the shell cannot find `./sbt-launcher.sh` because the agent was not at the repository root, or sbt-extras reports that the current directory does not appear to be an sbt project
 - **THEN** the agent changes to the repository root and runs the same sbt commands there, and does not pass `-sbt-create`
 
 #### Scenario: Malformed permitted option
@@ -123,7 +123,7 @@ WHEN sbt has loaded the build, which is visible from its `welcome to sbt` or `lo
 
 #### Scenario: Compilation error
 - **WHEN** `compile` fails with `[error]` lines pointing at source files
-- **THEN** the agent fixes the code and re-runs `./sbt-sber.sh -batch compile`
+- **THEN** the agent fixes the code and re-runs `./sbt-launcher.sh -batch compile`
 
 #### Scenario: Failing test
 - **WHEN** `test` reports failed test cases

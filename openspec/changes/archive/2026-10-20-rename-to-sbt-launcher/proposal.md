@@ -1,0 +1,37 @@
+# Proposal
+
+## Why
+
+The skill names the launcher by its exact file name, and that name must match the script agents find at the repository root. The corporate launcher is being standardised as `sbt-launcher.sh` in every repository, which reverses the name `sbt-sber.sh` that the archived change `2026-10-20-rename-launcher-to-sbt-sber` introduced; the skill still says `sbt-sber.sh` in every rule, command example, error-message example, and trigger phrase, so an agent following it would type commands that fail with `no such file or directory` or apply the "No launcher, no build" rule and stop. At the same time the skill's own name, `corp-scala`, says nothing about what it contains: every rule in it hangs on the launcher, so the skill takes the launcher's name. Both renames land now, in one change, because a formatting rule is about to be added to the skill and its text should be written once, against the final names.
+
+## What Changes
+
+- Every mention of the launcher's file name in the skill changes from `sbt-sber.sh` to `sbt-launcher.sh`: in `SKILL.md` the frontmatter description that triggers the skill, the rules, the command examples, the report template, and the shell error example; in `references/sbt-launcher.md` the layer diagram, the section heading "Launcher (`sbt-sber.sh`)", the shell error examples, the "Your own invocation mistakes" table, and the worked-example and common-mistakes tables.
+- The three capability specs that quote the file name change the same way in every requirement and scenario that quotes it. Requirement names, structure, and SHALL statements are otherwise untouched; only the literal file name moves.
+- The skill is renamed from `corp-scala` to `sbt-launcher`: the directory `skills/corp-scala/` becomes `skills/sbt-launcher/`, the frontmatter `name` becomes `sbt-launcher`, and the title line `# Corporate Scala` becomes `# sbt launcher`. The `skill-collection` spec, whose scenarios name the existing skill literally, changes to name `sbt-launcher`.
+- `README.md` names the skill `sbt-launcher` in its table row, its install paragraph, its install example, and the resulting path, and gains one sentence telling anyone who installed `corp-scala` to delete that copy, because an old copy left beside the new one would fire on the same repositories with the other launcher name.
+- **BREAKING** for agents: the skill stops recognising `sbt-sber.sh`. Under the renamed rules a repository whose launcher still carries that name is "not set up for agent builds", and the skill's description no longer triggers on that file. No alias, fallback, or transition note for the old name is added. An installed `corp-scala/` copy keeps working as it was but contradicts the new skill; it is removed, not updated in place.
+- Unchanged: the generic word "launcher" throughout, the reference document's file name `references/sbt-launcher.md` and its title, the tokens `sbt-launch.jar` and `~/.sbt/launchers/`, the rules themselves, the three capability names, the flat layout of `openspec/specs/`, and the archived changes, which stay as the historical record under the names they were written with.
+
+## Capabilities
+
+### New Capabilities
+
+None.
+
+### Modified Capabilities
+
+- `sbt-invocation`: seven requirements quote `./sbt-sber.sh` in their text or scenarios and are modified to quote `./sbt-launcher.sh`: "The launcher is the only way to run sbt", "The launcher runs from the repository root", "Every invocation is non-interactive", "Only sbt commands and output-only settings go on the command line", "Launcher and infrastructure failures stop the task", "The agent corrects its own invocation mistakes", and "Build failures are the agent's work". The other four requirements of this capability do not name the file and are not touched.
+- `launcher-owned-configuration`: all four requirements name the file and are modified: "Authentication, repositories, and memory belong to the launcher", "Launcher-owned files are read-only", "No overrides through the environment or runner flags" (its "Environment variable prefix" scenario), and "The launcher is a black box".
+- `project-dependencies`: two requirements quote the file in one scenario each and are modified: "No side channels for artifacts" ("Setting a dependency from the command line") and "Work with what the module already declares" ("Discovering declared dependencies"). The other three requirements are not touched.
+- `skill-collection`: all three requirements name the existing skill in one scenario each and are modified to name `sbt-launcher`: "Every skill lives in its own directory under `skills/`" ("The existing skill"), "A skill is self-contained within its directory" ("Links inside the existing skill"), and "The root README lists every skill" ("Installing from the README"). The SHALL statements, which speak of `skills/<name>/` generically, do not change.
+
+## Impact
+
+- Skill files: `skills/corp-scala/SKILL.md` (143 lines, 26 occurrences of `sbt-sber.sh`, two of them in the frontmatter description) moves to `skills/sbt-launcher/SKILL.md` with the file name replaced, the `name` line changed, and the title line changed; `skills/corp-scala/references/sbt-launcher.md` (391 lines, 44 occurrences, including one section heading and the layer diagram) moves to `skills/sbt-launcher/references/sbt-launcher.md` with the file name replaced. After the change `grep -rn "sbt-sber" skills/` and `grep -rn "corp-scala" skills/` return nothing, `test -e skills/corp-scala` fails, and the three links to `references/sbt-launcher.md` in `SKILL.md` and the one `../SKILL.md` link in the reference keep resolving.
+- `README.md`: four lines name the skill and change; one sentence is added about removing an installed `corp-scala/` copy.
+- Specs: 17 occurrences of the file name across 13 requirements in three main specs, and the skill name in 3 requirements of a fourth, carried by this change's four delta specs and applied to `openspec/specs/` when the change is archived or synced. No requirement is added, removed, or renamed.
+- Downstream: every agent session that loads the skill. The skill now triggers on `./sbt-launcher.sh` at the root and treats only that file as the launcher. Every corporate repository ships the launcher as `sbt-launcher.sh`; a repository that still has `sbt-sber.sh` has to rename it for agent builds to work, and that rename is outside this repository. Anyone who installed `corp-scala` deletes that directory and installs `sbt-launcher`.
+- Sequencing: the formatting change that follows (`mandatory-scalafmt`) also modifies `sbt-invocation` and names the launcher and the skill throughout, so it is proposed only after this change is archived.
+- Assumptions, recorded here so review can overturn them: the launcher keeps its location at the repository root and its contract (a wrapper over the sbt-extras runner that adds corporate settings and forwards every other argument), so nothing but the name changes; the reference document keeps its file name, which now matches the skill's; the frontmatter description keeps the word "corporate" and changes only the file-name token; neither old name gets a compatibility mention in the skill; the GitHub repository name `corp-scala-skill` stays a deferred question, as the layout change left it.
+- Verification stays as in the earlier changes: by review and text checks, since no launcher or sbt project is available in this repository.
