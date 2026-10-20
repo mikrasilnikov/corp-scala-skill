@@ -107,6 +107,10 @@ WHEN a launcher run fails because the agent's own command did not follow this ca
 - **WHEN** sbt reports that a command the agent passed is not valid, for example because a `testOnly` argument was not quoted and arrived as a separate command
 - **THEN** the agent corrects the spelling, quoting, or module scope and runs the command again
 
+#### Scenario: A correctly spelled scalafmt task is rejected
+- **WHEN** sbt reports `Not a valid key` or `Not a valid command` for `scalafmtAll`, and the agent confirms the task is spelled exactly `scalafmtAll`
+- **THEN** this is not an invocation mistake; the agent does not respell or retry it and handles the failure as formatting not available, as the `source-formatting` capability requires
+
 ### Requirement: Corrections stay within the invocation rules
 A correction SHALL only bring the command into line with this capability's rules: the agent SHALL NOT add a forbidden flag, `set` command, or environment variable, change configuration, or use another tool. If the corrected command still fails before sbt has loaded the build, the agent SHALL stop and report as for any launcher or infrastructure failure.
 

@@ -7,7 +7,7 @@ Defines how an agent keeps a corporate Scala project formatted with scalafmt: `s
 ## ADDED Requirements
 
 ### Requirement: Every build starts with scalafmtAll
-The agent SHALL make `scalafmtAll` the first sbt command of every launcher invocation that compiles or tests, in the same invocation as those tasks, and SHALL run `./sbt-launcher.sh -batch scalafmtAll` on its own when a change to the repository ends without a build.
+The agent SHALL make `scalafmtAll` the first sbt command of every launcher invocation that compiles or tests, in the same invocation as those tasks, and SHALL run `./sbt-launcher.sh -batch scalafmtAll` on its own when a change to the repository ends without a build. This applies to compiling and testing invocations that other capabilities specify as well.
 
 #### Scenario: Compiling and testing after a change
 - **WHEN** the agent has changed source files and runs the build
@@ -25,16 +25,16 @@ The agent SHALL make `scalafmtAll` the first sbt command of every launcher invoc
 - **WHEN** the agent runs only a read-only sbt command, such as `show core/libraryDependencies` or `projects`
 - **THEN** it does not prepend `scalafmtAll`, because nothing is built
 
+#### Scenario: Invocations specified by other capabilities
+- **WHEN** a scenario of another capability, such as `sbt-invocation`, gives a compiling or testing invocation without `scalafmtAll`, for example `./sbt-launcher.sh -batch compile` or `./sbt-launcher.sh -batch clean compile test`
+- **THEN** the agent runs it with `scalafmtAll` first, such as `./sbt-launcher.sh -batch scalafmtAll compile` or `./sbt-launcher.sh -batch scalafmtAll clean compile test`
+
 ### Requirement: Formatting scope belongs to the repository
-The agent SHALL run `scalafmtAll` unscoped from the repository root and SHALL NOT narrow or replace it. Which files it formats is decided by the repository's scalafmt settings, and files it reformats outside the agent's own edits SHALL be left formatted. When the root project does not aggregate a module whose sources the agent changed, the agent SHALL also run `<module>/scalafmtAll` immediately after the unscoped `scalafmtAll`, in addition to it and never in its place.
+The agent SHALL run `scalafmtAll` unscoped from the repository root and SHALL NOT narrow or replace it. Which files it formats is decided by the repository's scalafmt settings, and files it reformats outside the agent's own edits SHALL be left formatted.
 
 #### Scenario: Working in one module
 - **WHEN** the agent scopes compile and test to a module
 - **THEN** it still runs `scalafmtAll` without a module prefix, `./sbt-launcher.sh -batch scalafmtAll core/compile core/test`, and not `core/scalafmtAll` in its place
-
-#### Scenario: Changed module not aggregated by the root
-- **WHEN** the agent changed sources in a module the root project does not aggregate, for example a root defined as `project in file(".")` whose `.aggregate(...)` does not name it
-- **THEN** the invocation is `./sbt-launcher.sh -batch scalafmtAll core/scalafmtAll core/compile core/test`, or `./sbt-launcher.sh -batch scalafmtAll core/scalafmtAll` for a change with no build, and the agent does not finish with that module unformatted
 
 #### Scenario: Tempted to format only the changed files
 - **WHEN** the agent could run `scalafmtOnly <files>`, `scalafmt`, or `Test/scalafmt` to touch fewer files
@@ -48,8 +48,19 @@ The agent SHALL run `scalafmtAll` unscoped from the repository root and SHALL NO
 - **WHEN** the agent has changed a `*.sbt` or `project/*.scala` file in a way the skill permits
 - **THEN** it does not run `scalafmtSbt`; formatting build definition files is the repository's to enable, for example through `scalafmtSbtOnLoad` (sbt-scalafmt 2.6.2 and later)
 
+### Requirement: Modules the root does not aggregate are formatted too
+WHEN the root project does not aggregate a module whose sources the agent changed, the agent SHALL also run `<module>/scalafmtAll` immediately after the unscoped `scalafmtAll`, in addition to it and never in its place, unless the repository has turned the sbt-scalafmt plugin off for that module.
+
+#### Scenario: Changed module not aggregated by the root
+- **WHEN** the agent changed sources in a module the root project does not aggregate, for example a root defined as `project in file(".")` with `.dependsOn(core)` and no `.aggregate`, or one whose `.aggregate(...)` does not reach the module directly or through a module it aggregates
+- **THEN** the invocation is `./sbt-launcher.sh -batch scalafmtAll core/scalafmtAll core/compile core/test`, or `./sbt-launcher.sh -batch scalafmtAll core/scalafmtAll` for a change with no build, and the agent does not finish with that module unformatted
+
+#### Scenario: Module with the plugin turned off
+- **WHEN** `<module>/scalafmtAll` fails with `No such setting/task` after the unscoped `scalafmtAll` succeeded in the same invocation, because the build turns the plugin off for that module (`disablePlugins`)
+- **THEN** the agent runs the same invocation again without the module task, `scalafmtAll` still first, names the module as excluded from formatting by the repository in its report, does not stop, and does not turn the plugin on
+
 ### Requirement: Scalafmt configuration is read-only
-The agent SHALL NOT create, modify, or delete `.scalafmt.conf`, and SHALL NOT change any scalafmt setting in the build definition, such as `scalafmtFilter`, `scalafmtOnCompile`, `scalafmtConfig`, `scalafmtFailOnErrors`, or `scalafmtSbtOnLoad`, whether in a file or with `set` on the launcher command line.
+The agent SHALL NOT create, modify, or delete `.scalafmt.conf`, and SHALL NOT change any scalafmt setting in the build definition, such as `scalafmtFilter`, `scalafmtOnCompile`, `scalafmtConfig`, `scalafmtFailOnErrors`, or `scalafmtSbtOnLoad`, whether in a file or with `set` on the launcher command line. It SHALL NOT turn the sbt-scalafmt plugin on or off for any project (`enablePlugins`, `disablePlugins`).
 
 #### Scenario: The pinned version seems old or cannot be fetched
 - **WHEN** the `version` pinned in `.scalafmt.conf` is older than the agent would choose, or the build cannot download it

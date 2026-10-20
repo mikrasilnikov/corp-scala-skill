@@ -366,6 +366,7 @@ These failures come from the command you typed, not from the build or the infras
 | `Aborting: -trace requires <integer> argument` | sbt-extras | `-trace <n>` with `n` of 0 or more, or drop `-trace`. |
 | `Not a valid command`, `Not a valid key`, `Not a valid project ID`, `Expected ...` | sbt, after the marker | Fix the spelling, quote a command that has arguments, or fix the module name. |
 | `Not a valid key: scalafmtAll` or `Not a valid command: scalafmtAll`, with the task spelled exactly `scalafmtAll` | sbt, after the marker | None: this is not your mistake. Report it as formatting not available. |
+| `No such setting/task` pointing at a `<module>/scalafmtAll` you added, after the unscoped `scalafmtAll` succeeded | sbt, after the marker | The build turns the plugin off for that module (`disablePlugins`). Drop the module task, keep `scalafmtAll` first, run again, and name the module as excluded from formatting. Do not turn the plugin on. |
 
 An unquoted `testOnly` argument, for example (typical, abbreviated). sbt first runs `testOnly` with no argument, which runs every test, and then rejects the class name as a command:
 
@@ -420,7 +421,7 @@ Common mistakes:
 | `SBT_OPTS=-J-Xmx4g ./sbt-launcher.sh -batch test` | Environment override of memory. | Report the out-of-memory failure. |
 | `./sbt-launcher.sh -batch "set scalacOptions += \"-Xfatal-warnings\"" compile` | Changes compilation. | `./sbt-launcher.sh -batch compile` |
 | `./sbt-launcher.sh -batch "scalafmtOnly src/main/scala/com/acme/Foo.scala" compile` | Narrows the repository's formatting scope. | `./sbt-launcher.sh -batch scalafmtAll compile` |
-| `./sbt-launcher.sh -batch core/scalafmtAll core/compile` | Replaces the unscoped task with a module one, which narrows the repository's scope. | `./sbt-launcher.sh -batch scalafmtAll core/compile`, adding `core/scalafmtAll` after `scalafmtAll` only when the root does not aggregate `core` |
+| `./sbt-launcher.sh -batch core/scalafmtAll core/compile` | Replaces the unscoped task with a module one, which narrows the repository's scope. | `./sbt-launcher.sh -batch scalafmtAll core/compile`, adding `core/scalafmtAll` after `scalafmtAll` when the root does not aggregate `core` or you cannot tell |
 | `scalafmt src/` or `cs launch scalafmt -- src/` | Formats outside the launcher and the corporate repositories. | `./sbt-launcher.sh -batch scalafmtAll` |
 
 ## 6. sbt-extras revision
