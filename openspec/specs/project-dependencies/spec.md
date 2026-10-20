@@ -48,7 +48,7 @@ The agent SHALL treat every one of the following as a dependency under this rule
 The agent SHALL NOT bring artifacts onto the classpath by means outside the build definition: `set libraryDependencies ...` or similar on the launcher command line, `coursier` or `cs fetch`, `scala-cli --dep`, Ammonite `import $ivy`, downloading jars manually, or copying jars from local caches into the project.
 
 #### Scenario: Setting a dependency from the command line
-- **WHEN** the agent could run `./sbt-launcher.sh -batch "set libraryDependencies += ..." compile`
+- **WHEN** the agent could run `./sbt-sber.sh -batch "set libraryDependencies += ..." compile`
 - **THEN** it does not
 
 #### Scenario: Fetching an artifact with another tool
@@ -72,7 +72,7 @@ The agent SHALL implement with the dependencies already declared for the module 
 
 #### Scenario: Discovering declared dependencies
 - **WHEN** the agent needs to know what a module declares
-- **THEN** it reads the build definition files or runs a read-only sbt command such as `./sbt-launcher.sh -batch "show core/libraryDependencies"`
+- **THEN** it reads the build definition files or runs a read-only sbt command such as `./sbt-sber.sh -batch "show core/libraryDependencies"`
 
 ### Requirement: Asking for a dependency
 WHEN the agent determines that its task cannot be completed without a dependency change, it SHALL stop and ask the user, stating the proposed coordinates (organisation, artifact, version if known), the module, the configuration such as `Compile` or `Test`, why it is needed, and which declared alternatives it ruled out. It SHALL NOT add the dependency provisionally while waiting.
