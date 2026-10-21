@@ -7,6 +7,7 @@ This repository is a collection of agent skills in the `SKILL.md` format. Each s
 | Skill | Summary |
 | --- | --- |
 | `sbt-launcher` | Building, testing, formatting, and changing dependencies in corporate Scala projects built with sbt. |
+| `upickle` | Converting JSON Schema documents, as produced by upickle-jsonschema, into case classes that upickle reads directly. |
 
 ## Installing a skill
 
