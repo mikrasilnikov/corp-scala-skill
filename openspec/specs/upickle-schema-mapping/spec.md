@@ -118,11 +118,15 @@ An `array` with `items` S SHALL map to `Seq[T]`, or to `Set[T]` when `uniqueItem
 - **THEN** the field is `Map[Int, String]`
 
 ### Requirement: Objects with properties become case classes
-An `object` schema with `properties` SHALL map to a case class with one constructor field per property, in the schema's property order. A property name that is a legal Scala identifier SHALL be the field name verbatim; any other SHALL get a camel-case field name annotated with `@key("<property>")`. `additionalProperties: false` SHALL add `@allowUnknownKeys(false)` to the class, and `true` SHALL add nothing. An object with no properties SHALL be an empty case class.
+An `object` schema with `properties` SHALL map to a case class with one constructor field per property, in the schema's property order. A property name that is already lowerCamelCase SHALL be the field name verbatim; any other SHALL get a lowerCamelCase field name annotated with `@key("<property>")`. `additionalProperties: false` SHALL add `@allowUnknownKeys(false)` to the class, and `true` SHALL add nothing. An object with no properties SHALL be an empty case class.
 
 #### Scenario: Property names kept verbatim
+- **WHEN** an object has the properties `firstName` and `totalCount`, which are already lowerCamelCase
+- **THEN** the fields are `firstName` and `totalCount`, with no `@key` annotation
+
+#### Scenario: Property names in another style
 - **WHEN** an object has the properties `first_name` and `total_count`
-- **THEN** the fields are `first_name` and `total_count`, with no `@key` annotation
+- **THEN** the fields are `@key("first_name") firstName` and `@key("total_count") totalCount`
 
 #### Scenario: Property name that is not an identifier
 - **WHEN** an object has the property `content-type`
@@ -156,7 +160,7 @@ A `oneOf` whose entries are each either `{"const": "<tag>"}` or an `allOf` of a 
 - **THEN** the generated definitions refer to each other directly, with no indirection added for the recursion
 
 ### Requirement: Family cases are named by their tags
-Each case of a sealed family SHALL be named exactly as its tag, or SHALL carry `@key("<tag>")` when the tag is not a legal name. A tag property other than `$type` SHALL be declared with `@key("<property>")` on the family. No other handling of the tag SHALL be written.
+Each case of a sealed family SHALL be named as its tag when the tag is already UpperCamelCase, and otherwise SHALL be named in UpperCamelCase and carry `@key("<tag>")`. A tag property other than `$type` SHALL be declared with `@key("<property>")` on the family. No other handling of the tag SHALL be written.
 
 #### Scenario: Family with a renamed tag property
 - **WHEN** the tag property in every `allOf` entry is `kind` instead of `$type`
@@ -167,8 +171,12 @@ Each case of a sealed family SHALL be named exactly as its tag, or SHALL carry `
 - **THEN** the case is `@key("reddit.com") case object RedditCom`, or the equivalent enum case
 
 #### Scenario: Case name differs from the tag
-- **WHEN** the agent would prefer a case name other than the tag, for example a different capitalisation
-- **THEN** it keeps the tag as the name, or names the case as it prefers and annotates it with `@key("<tag>")`
+- **WHEN** a `oneOf` entry reads `{"const": "in_progress"}`, a tag that is not UpperCamelCase
+- **THEN** the case is `@key("in_progress") case object InProgress`, or `@key("in_progress") case InProgress` in an `enum`
+
+#### Scenario: Tag already in UpperCamelCase
+- **WHEN** a `oneOf` entry reads `{"const": "End"}`
+- **THEN** the case is `case object End`, or `case End` in an `enum`, with no annotation
 
 ### Requirement: Names derive from $defs keys when the producer is unknown
 When the producer's definition is not known, a `$defs` entry outside the `scala` package that gets a definition, not one mapped to a tuple, SHALL be named by the last dotted segment of its key before any `[`. Capitalised segments before it SHALL become enclosing objects that nest it, and lowercase-first segments are the producer's package, which SHALL be replaced by the consumer's. Entries keyed in the `scala` package SHALL follow the tuple, named-tuple, and `Either` rules.

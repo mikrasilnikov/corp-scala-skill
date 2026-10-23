@@ -32,9 +32,9 @@ If you installed this skill under its former name, delete that `corp-scala/` dir
 
 | Rules file | Summary |
 | --- | --- |
-| `virtuslab-scala-style` | Code style, file and package layout, domain modelling, error handling and test style for Scala 3 and Scala 2.13 code, adapted from VirtusLab's scala-skill without its build tools and libraries. |
+| `virtuslab-scala-style` | Code style, file and package layout, domain modelling, error handling and test style for Scala 3 and Scala 2.13 code, adapted from VirtusLab's scala-skill without its build tools and libraries; as this repository's additions, it requires mouse, enumeratum, Chimney and Monocle in every module it governs. |
 
-A rules file is installed per project and applies to every session in it. To install one in OpenCode, take either route:
+A rules file is installed per project and applies to every session in it. Before installing `virtuslab-scala-style`, declare mouse, enumeratum, Chimney and Monocle in every module the file will govern: the file's preamble gives their coordinates, and mouse and Monocle bring cats-core with them. A Scala 3 module that declares an enumeratum value enum also needs the compiler option `-Yretain-trees`, set on its Scala 3 compilation only, since Scala 2.13 rejects it. In a module that lacks one of these, the agent stops and asks for it rather than working around it. To install a rules file in OpenCode, take either route:
 
 - Paste the file's content into the project's `AGENTS.md`.
 - Copy the file into the project, for example as `rules/virtuslab-scala-style.md`, and add that path to `instructions` in the project's `opencode.json`:
@@ -50,5 +50,5 @@ The rules are in the agent's context from the project's next session on. The sam
 To add a rules file:
 
 - Create one flat file `rules/<name>.md` with a kebab-case `<name>`: no frontmatter, no subdirectory, no supporting files, and no links, since the file is read on its own wherever it is pasted.
-- State in its first lines what it applies to and what wins when one of its rules conflicts with the repository it is loaded in.
+- State in its first lines what it applies to and what wins when one of its rules conflicts with the repository it is loaded in, and, if its rules rely on libraries, which ones every governed module must declare, with any compiler option one of them needs, and what the agent does in a module that lacks one.
 - Add a row for it to the table above in the same change.

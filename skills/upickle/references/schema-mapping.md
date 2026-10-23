@@ -235,7 +235,7 @@ Field declarations unless the row says otherwise. On Scala 2.13 the imports are 
 | map with `"format": "uuid"` | `byId: Map[java.util.UUID, Int]` | `byId: Map[java.util.UUID, Int]` |
 | map whose producer key type is not an object key (source only) | `counts: Map[Color, Int]`, with `Color` mirrored | `counts: Map[Color, Int]`, with `Color` mirrored |
 | `$ref` to an object entry | `address: Address` | `address: Address` |
-| property name that is not an identifier | `@key("content-type") contentType: String` | `@key("content-type") contentType: String` |
+| property name that is not lowerCamelCase | `@key("first_name") firstName: String` | `@key("first_name") firstName: String` |
 | object entry with `properties` | `case class Address(street: String)` and `object Address { implicit val rw: ReadWriter[Address] = macroRW }` | `case class Address(street: String) derives ReadWriter` |
 | object entry with `"additionalProperties": false` | `@allowUnknownKeys(false) case class Strict(x: Int)` and its companion as above | `@allowUnknownKeys(false) case class Strict(x: Int) derives ReadWriter` |
 | object entry with no properties | `case class Ping()` and its companion as above | `case class Ping() derives ReadWriter` |
@@ -305,7 +305,7 @@ object ApiResult {
 
 **How upickle derives a case's tag.** For a Scala 3 `enum`, the tag is the case's own name. For a `sealed trait`, on Scala 2 and 3, it is the case's full name with the leading segments shared by all cases of the family dropped: `example.LinkedList.End` and `example.LinkedList.Node` share `example.LinkedList`, so the tags are `End` and `Node`. Were a third case, `case class Leaf`, declared at the top level of package `example` instead of in the companion, the shared prefix would shrink to `example`, and the tags would become `LinkedList.End`, `LinkedList.Node`, and `Leaf`. Placing every case in the family's companion keeps each tag equal to the case's simple name, which is what the schema's `const` values are.
 
-**`@key` on a case** replaces its tag, for writing and reading: `@key("reddit.com") case object RedditCom` is written as `"reddit.com"`.
+**`@key` on a case** replaces its tag, for writing and reading: `@key("reddit.com") case object RedditCom` is written as `"reddit.com"`. A case whose tag is not UpperCamelCase is named in UpperCamelCase and keeps its tag through `@key`: `@key("in_progress") case object InProgress` reads and writes `"in_progress"`.
 
 **`@key` on the family** replaces the tag property for that family: `@key("kind") sealed trait Site` writes `{"kind": "Other", "host": "a"}`. The Api's `tagName` (section 7) replaces it for every family at once.
 
@@ -390,7 +390,7 @@ object UserEvent {
 
 ## 6. Translating Scala 3 producer idioms to Scala 2.13
 
-When the producer's source is Scala 3 and the consumer module is on Scala 2.13 or 2.12, or cross-built with Scala 2, mirror each idiom in its Scala 2 form. The names, and so the tags and property names, stay the same.
+When the producer's source is Scala 3 and the consumer module is on Scala 2.13 or 2.12, or cross-built with Scala 2, mirror each idiom in its Scala 2 form. The names stay those of the Scala 3 consumer, lowerCamelCase fields and UpperCamelCase cases with `@key` wherever the producer's spelling differs, and so the tags and property names stay the same.
 
 | Scala 3 producer | Scala 2.13 consumer |
 |---|---|
@@ -539,7 +539,7 @@ The producer's source is not available. The document, as upickle-jsonschema 4.4.
 Reading it by the rules:
 
 - The root is `example.Envelope[example.Payload]`. It reaches `example.Payload`, then `example.Kind`, then `example.Kind.Custom`; all four entries are generated.
-- `Envelope[T]` is generic: its argument `example.Payload` is the S of `data`'s optional shape. `data` is not in `required`, so it is `Option[T] = None`. `total_count` is a bare `integer`, so `Int`, reported. `trace_id` is the `Long` shape.
+- `Envelope[T]` is generic: its argument `example.Payload` is the S of `data`'s optional shape. `data` is not in `required`, so it is `Option[T] = None`. `total_count` is a bare `integer`, so `Int`, reported. `trace_id` is the `Long` shape. Neither name is lowerCamelCase, so the fields are `@key("total_count") totalCount` and `@key("trace_id") traceId`.
 - In `Payload`, `id` is a required `String`, reported. `name` is not in `required` and not the optional shape, and the producer's default is unknown, so it is `Option[String] = None`, reported. `tags` is `Seq[String]`, reported. `labels` has the integral `propertyNames`, so `Map[Long, String]`, reported. `kind` refers to the family.
 - `example.Kind` is a tagged `oneOf`: the bare `const` `Standard` is a singleton case, and `example.Kind.Custom` nests in `Kind` as its case class, tagged `Custom` by `$type`. `Custom.label` is a `String`, reported.
 - The consumer module keeps its models in `com.acme.orders.model`, so the file is `Envelope.scala` there.
@@ -550,11 +550,12 @@ Scala 3:
 package com.acme.orders.model
 
 import upickle.default.ReadWriter
+import upickle.implicits.key
 
 case class Envelope[T](
     data: Option[T] = None,
-    total_count: Int,
-    trace_id: Long
+    @key("total_count") totalCount: Int,
+    @key("trace_id") traceId: Long
 ) derives ReadWriter
 
 case class Payload(
@@ -576,11 +577,12 @@ Scala 2.13, which also compiles on Scala 3 for a cross-built module:
 package com.acme.orders.model
 
 import upickle.default.{macroRW, ReadWriter}
+import upickle.implicits.key
 
 case class Envelope[T](
     data: Option[T] = None,
-    total_count: Int,
-    trace_id: Long
+    @key("total_count") totalCount: Int,
+    @key("trace_id") traceId: Long
 )
 object Envelope {
   implicit def rw[T: ReadWriter]: ReadWriter[Envelope[T]] = macroRW
@@ -626,7 +628,7 @@ class EnvelopeSpec extends munit.FunSuite {
         | "total_count": 1, "trace_id": 42}""".stripMargin
     )
     assertEquals(e.data, Some(Payload("p-1", Some("first"), Seq("a"), Map(1L -> "one"), Kind.Standard)))
-    assertEquals(e.trace_id, 42L)
+    assertEquals(e.traceId, 42L)
   }
 
   test("data null") {
@@ -645,7 +647,7 @@ class EnvelopeSpec extends munit.FunSuite {
     assertEquals(e.data.map(_.name), Some(None))
     assertEquals(e.data.map(_.kind), Some(Kind.Custom("vip")))
     assertEquals(e.data.map(_.labels), Some(Map(-7L -> "neg")))
-    assertEquals(e.trace_id, Long.MaxValue)
+    assertEquals(e.traceId, Long.MaxValue)
   }
 }
 ```
@@ -660,7 +662,7 @@ Files written: orders/src/main/scala/com/acme/orders/model/Envelope.scala, order
 Test:          com.acme.orders.model.EnvelopeSpec, 4 documents
 Build:         orders/compile and orders/testOnly com.acme.orders.model.EnvelopeSpec, run the way the repository requires: passed, 4 tests
 Defaults and fallbacks:
-  Envelope.total_count: Int; schema allows Int, Short, Byte
+  Envelope.totalCount: Int; schema allows Int, Short, Byte
   Payload.id: String; schema allows String, Char, Symbol, java.util.UUID, BigDecimal
   Payload.name: Option[String] = None; schema allows a String with a default it does not carry
   Payload.tags: Seq[String]; schema allows Seq, List, Vector, Array
