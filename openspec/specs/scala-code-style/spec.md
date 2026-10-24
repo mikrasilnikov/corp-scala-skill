@@ -74,17 +74,6 @@ WHEN a `val` is used exactly once, on the next line, only to feed the next expre
 - **WHEN** the value's name explains a non-obvious step, such as `val normalisedEmail`
 - **THEN** the agent keeps the named `val`
 
-### Requirement: Non-Unit results are discarded explicitly
-WHEN an expression's non-Unit result is intentionally unused, the agent SHALL discard it explicitly, in the form the repository already uses, rather than leave a bare non-Unit statement.
-
-#### Scenario: An unused return value
-- **WHEN** a call returns a value the code does not need
-- **THEN** the agent discards it explicitly, and no discarded-value warning is produced
-
-#### Scenario: A value used later
-- **WHEN** the result is needed further down
-- **THEN** it is bound to a named `val` instead
-
 ### Requirement: Code compiles with zero warnings
 Code the agent writes SHALL compile with zero warnings under the repository's configured compiler options. The agent SHALL fix the cause in code, SHALL suppress a warning only for generated code or an unfixable third-party issue, with a comment saying why, and SHALL NOT change compiler options to silence a warning.
 
