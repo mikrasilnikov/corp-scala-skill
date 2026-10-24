@@ -69,21 +69,6 @@ The agent SHALL design types so that invalid data cannot be represented: enums o
 - **WHEN** a value must satisfy a condition to be meaningful
 - **THEN** the only way to obtain one is a validated constructor
 
-### Requirement: Domain concepts are not raw primitives
-Identifiers, quantities and configuration values SHALL be wrapped in opaque types, or value classes or tagged types on Scala 2.13, or in enums, and SHALL NOT be passed around as bare `String`, `Int`, `Long` or `Boolean`.
-
-#### Scenario: An identifier parameter
-- **WHEN** a method takes an order identifier
-- **THEN** the parameter type is `OrderId`, not `String`
-
-#### Scenario: A configuration value
-- **WHEN** a port or a topic name is read from configuration
-- **THEN** it is typed as `Port` or `TopicName`, not `Int` or `String`
-
-#### Scenario: Two identifiers swapped
-- **WHEN** a product code is passed where an order identifier is expected
-- **THEN** the code does not compile
-
 ### Requirement: Smart constructors return Either
 WHEN a value has invariants, its constructor SHALL return `Either` with a typed error and SHALL NOT use `require` or throw. The companion SHALL expose no public way to build an invalid value.
 
@@ -110,17 +95,6 @@ A Boolean parameter or return value whose meaning a call site cannot read SHALL 
 - **WHEN** a method such as `isEmpty` answers a yes-or-no question that its name states
 - **THEN** its Boolean result stays
 
-### Requirement: Identifiers are phantom-typed
-Identifiers of different entities SHALL be distinct types, either one opaque identifier type parameterised by the entity it identifies or one opaque type per entity, so that an identifier of one entity cannot be passed for another.
-
-#### Scenario: A user id where an order id is expected
-- **WHEN** code passes a user's identifier to a method that takes an order's
-- **THEN** the code does not compile
-
-#### Scenario: Shared identifier plumbing
-- **WHEN** many entities need the same identifier representation
-- **THEN** one parameterised opaque type serves them all without losing the distinction
-
 ### Requirement: Proof types record a normalisation
 WHEN a value must have been transformed before use, such as lower-cased, trimmed or hashed, the result SHALL have a distinct type, an opaque subtype on Scala 3, produced only by the function that performs the transformation, so that an untransformed value cannot be passed in its place.
 
@@ -133,15 +107,15 @@ WHEN a value must have been transformed before use, such as lower-cased, trimmed
 - **THEN** it accepts only the hashed type, which only the hashing function produces
 
 ### Requirement: Generated and external types stop at the boundary
-Types generated from schemas or wire formats, and types of other systems, SHALL be converted to domain types at the boundary where they arrive, and the raw strings and numbers they carry SHALL NOT reach the domain.
+Types generated from schemas or wire formats, and types of other systems, SHALL be converted to the domain's own types at the boundary where they arrive, and domain code SHALL NOT import a generated package or name another system's type.
 
 #### Scenario: A generated class with string fields
 - **WHEN** a code generator produces classes whose fields are all `String`
-- **THEN** the adapter that receives them builds domain values with opaque types, and domain code never imports the generated package
+- **THEN** the adapter that receives them builds the domain's types from those fields, giving each the type the domain declares for it, and domain code never imports the generated package
 
 #### Scenario: A data transfer object
-- **WHEN** a DTO carries an identifier or a quantity
-- **THEN** it uses the domain's opaque type rather than falling back to a primitive
+- **WHEN** a data transfer object carries an identifier or a quantity
+- **THEN** the mapping at the adapter gives the value the type the domain declares for it, whether the DTO carried that type or the primitive its wire format uses
 
 ### Requirement: Configuration is typed per module and masks secrets
 Each module's configuration SHALL be a case class of typed values, composed into one top-level configuration. A secret SHALL be wrapped in a type whose string form masks it. Invalid configuration SHALL fail at startup, which is the one place a constructor may throw.
